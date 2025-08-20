@@ -1,0 +1,50 @@
+---
+- name: "Installa Apache su Linux"
+  package:
+    name: "{{ apache_package_name }}"
+    state: present
+  when: ansible_os_family != "Windows"
+  notify: restart_apache_linux
+
+- name: "Installa IIS su Windows"
+  win_optional_feature:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - IIS-WebServerRole
+    - IIS-WebServer
+    - IIS-HttpRedirect
+  when: ansible_os_family == "Windows"
+  notify: restart_iis
+
+- name: "Abilita e avvia Apache (Linux)"
+  systemd:
+    name: "{{ apache_service_name }}"
+    enabled: true
+    state: started
+  when: ansible_os_family != "Windows"
+
+- name: "Configura firewall per HTTP/HTTPS (Linux)"
+  firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: true
+  loop:
+    - http
+    - https
+  when: ansible_os_family != "Windows"
+  ignore_errors: true
+
+- name: "Configura firewall per HTTP/HTTPS (Windows)"
+  win_firewall_rule:
+    name: "Allow {{ item.name }}"
+    localport: "{{ item.port }}"
+    action: allow
+    direction: in
+    protocol: tcp
+    state: present
+  loop:
+    - { name: "HTTP", port: 80 }
+    - { name: "HTTPS", port: 443 }
+  when: ansible_os_family == "Windows"

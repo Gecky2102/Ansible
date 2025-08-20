@@ -1,0 +1,59 @@
+---
+- name: "Setup Base per Server Linux"
+  hosts: linux_servers
+  become: true
+  vars:
+    packages_to_install: "{{ common_packages }}"
+    services_to_enable: "{{ common_services }}"
+  
+  tasks:
+    - name: "Aggiorna cache pacchetti (Ubuntu/Debian)"
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+      
+    - name: "Aggiorna cache pacchetti (RHEL/CentOS)"
+      yum:
+        update_cache: true
+      when: ansible_os_family == "RedHat"
+      
+    - name: "Installa pacchetti comuni"
+      package:
+        name: "{{ packages_to_install }}"
+        state: present
+        
+    - name: "Configura timezone"
+      timezone:
+        name: "{{ timezone }}"
+        
+    - name: "Abilita e avvia servizi"
+      systemd:
+        name: "{{ item }}"
+        enabled: true
+        state: started
+      loop: "{{ services_to_enable }}"
+      ignore_errors: true
+      
+    - name: "Configura firewall (se abilitato)"
+      firewalld:
+        service: ssh
+        permanent: true
+        state: enabled
+        immediate: true
+      when: firewall_enabled | bool
+      ignore_errors: true
+      
+    - name: "Crea utente di deploy"
+      user:
+        name: deploy
+        groups: sudo
+        shell: /bin/bash
+        create_home: true
+        
+    - name: "Configura sudoers per utente deploy"
+      lineinfile:
+        path: /etc/sudoers.d/deploy
+        create: true
+        line: "deploy ALL=(ALL) NOPASSWD:ALL"
+        validate: visudo -cf %s

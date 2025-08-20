@@ -1,0 +1,119 @@
+---
+- name: "Deploy Applicazione Web"
+  hosts: linux_servers:windows_servers
+  vars:
+    app_name: "webapp"
+    app_version: "1.0.0"
+    app_port: 8080
+  
+  pre_tasks:
+    - name: "Crea backup directory"
+      file:
+        path: "/opt/backups/{{ app_name }}"
+        state: directory
+        mode: '0755'
+      when: ansible_os_family != "Windows"
+      
+    - name: "Crea backup directory (Windows)"
+      win_file:
+        path: "C:\\Backups\\{{ app_name }}"
+        state: directory
+      when: ansible_os_family == "Windows"
+  
+  roles:
+    - role: webserver
+      when: deploy_webserver | default(true)
+  
+  tasks:
+    - name: "Download applicazione (Linux)"
+      get_url:
+        url: "https://releases.example.com/{{ app_name }}/{{ app_version }}/{{ app_name }}.tar.gz"
+        dest: "/tmp/{{ app_name }}.tar.gz"
+        mode: '0644'
+      when: ansible_os_family != "Windows"
+      
+    - name: "Download applicazione (Windows)"
+      win_get_url:
+        url: "https://releases.example.com/{{ app_name }}/{{ app_version }}/{{ app_name }}.zip"
+        dest: "C:\\Temp\\{{ app_name }}.zip"
+      when: ansible_os_family == "Windows"
+      
+    - name: "Estrai applicazione (Linux)"
+      unarchive:
+        src: "/tmp/{{ app_name }}.tar.gz"
+        dest: "/opt/{{ app_name }}"
+        remote_src: true
+        creates: "/opt/{{ app_name }}/app.jar"
+      when: ansible_os_family != "Windows"
+      notify: restart_app_linux
+      
+    - name: "Estrai applicazione (Windows)"
+      win_unzip:
+        src: "C:\\Temp\\{{ app_name }}.zip"
+        dest: "C:\\Apps\\{{ app_name }}"
+        creates: "C:\\Apps\\{{ app_name }}\\app.exe"
+      when: ansible_os_family == "Windows"
+      notify: restart_app_windows
+      
+    - name: "Configura servizio systemd (Linux)"
+      template:
+        src: app.service.j2
+        dest: "/etc/systemd/system/{{ app_name }}.service"
+      when: ansible_os_family != "Windows"
+      notify:
+        - reload_systemd
+        - restart_app_linux
+        
+    - name: "Configura servizio Windows"
+      win_service:
+        name: "{{ app_name }}"
+        path: "C:\\Apps\\{{ app_name }}\\app.exe"
+        state: present
+        start_mode: auto
+      when: ansible_os_family == "Windows"
+      notify: restart_app_windows
+      
+    - name: "Abilita e avvia servizio (Linux)"
+      systemd:
+        name: "{{ app_name }}"
+        enabled: true
+        state: started
+        daemon_reload: true
+      when: ansible_os_family != "Windows"
+      
+  handlers:
+    - name: reload_systemd
+      systemd:
+        daemon_reload: true
+      when: ansible_os_family != "Windows"
+      
+    - name: restart_app_linux
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+      when: ansible_os_family != "Windows"
+      
+    - name: restart_app_windows
+      win_service:
+        name: "{{ app_name }}"
+        state: restarted
+      when: ansible_os_family == "Windows"
+      
+  post_tasks:
+    - name: "Verifica servizio attivo (Linux)"
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      retries: 5
+      delay: 10
+      when: ansible_os_family != "Windows"
+      
+    - name: "Verifica servizio attivo (Windows)"
+      win_uri:
+        url: "http://{{ ansible_ip_addresses[0] }}:{{ app_port }}/health"
+        method: GET
+        status_code: 200
+      retries: 5
+      delay: 10
+      when: ansible_os_family == "Windows"

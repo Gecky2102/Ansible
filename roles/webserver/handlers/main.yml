@@ -1,0 +1,12 @@
+---
+- name: restart_apache_linux
+  systemd:
+    name: "{{ apache_service_name }}"
+    state: restarted
+  when: ansible_os_family != "Windows"
+
+- name: restart_iis
+  win_service:
+    name: W3SVC
+    state: restarted
+  when: ansible_os_family == "Windows"

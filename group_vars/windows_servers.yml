@@ -1,0 +1,25 @@
+# Variabili per server Windows
+ansible_connection: winrm
+ansible_winrm_transport: kerberos
+ansible_winrm_server_cert_validation: ignore
+ansible_port: 5985
+ansible_user: Administrator
+
+# Funzionalità Windows da installare/configurare
+windows_features:
+  - IIS-WebServerRole
+  - IIS-WebServer
+  - IIS-HttpRedirect
+
+# Software da installare tramite Chocolatey
+chocolatey_packages:
+  - googlechrome
+  - notepadplusplus
+  - git
+
+# Configurazioni Windows
+windows_updates: yes
+windows_firewall_enabled: yes
+
+# Timezone
+timezone: "W. Europe Standard Time"

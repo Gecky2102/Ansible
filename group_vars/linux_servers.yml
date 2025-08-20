@@ -1,0 +1,26 @@
+# Variabili per server Linux
+ansible_user: ansible
+ansible_become: yes
+ansible_become_method: sudo
+ansible_python_interpreter: /usr/bin/python3
+
+# Pacchetti comuni da installare
+common_packages:
+  - curl
+  - wget
+  - git
+  - htop
+  - vim
+  - unzip
+
+# Servizi da abilitare
+common_services:
+  - ssh
+  - firewalld
+
+# Configurazioni di sicurezza
+security_updates: yes
+firewall_enabled: yes
+
+# Timezone
+timezone: Europe/Rome

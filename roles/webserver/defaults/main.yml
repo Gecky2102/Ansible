@@ -1,0 +1,12 @@
+---
+# Configurazioni per Apache/HTTPD (Linux)
+apache_package_name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+apache_service_name: "{{ 'httpd' if ansible_os_family == 'RedHat' else 'apache2' }}"
+
+# Configurazioni per IIS (Windows)
+iis_features:
+  - IIS-WebServerRole
+  - IIS-WebServer
+  - IIS-HttpRedirect
+  - IIS-ApplicationDevelopment
+  - IIS-ASPNET45

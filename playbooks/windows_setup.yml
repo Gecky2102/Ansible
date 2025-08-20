@@ -1,0 +1,68 @@
+---
+- name: "Setup Base per Server Windows"
+  hosts: windows_servers
+  gather_facts: true
+  vars:
+    features_to_install: "{{ windows_features }}"
+    packages_to_install: "{{ chocolatey_packages }}"
+  
+  tasks:
+    - name: "Verifica connessione WinRM"
+      win_ping:
+      
+    - name: "Installa Chocolatey"
+      win_chocolatey:
+        name: chocolatey
+        state: present
+        
+    - name: "Installa pacchetti Chocolatey"
+      win_chocolatey:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ packages_to_install }}"
+      
+    - name: "Abilita funzionalità Windows"
+      win_optional_feature:
+        name: "{{ item }}"
+        state: present
+      loop: "{{ features_to_install }}"
+      notify: riavvia_windows
+      
+    - name: "Configura timezone Windows"
+      win_timezone:
+        timezone: "{{ timezone }}"
+        
+    - name: "Configura Windows Updates"
+      win_updates:
+        category_names:
+          - SecurityUpdates
+          - CriticalUpdates
+        state: installed
+        reboot: false
+      when: windows_updates | bool
+      
+    - name: "Configura Windows Firewall"
+      win_firewall_rule:
+        name: "Allow RDP"
+        localport: 3389
+        action: allow
+        direction: in
+        protocol: tcp
+        state: present
+      when: windows_firewall_enabled | bool
+      
+    - name: "Crea cartella per applicazioni"
+      win_file:
+        path: C:\Apps
+        state: directory
+        
+    - name: "Configura servizio WinRM"
+      win_service:
+        name: WinRM
+        state: started
+        start_mode: auto
+        
+  handlers:
+    - name: riavvia_windows
+      win_reboot:
+        reboot_timeout: 600

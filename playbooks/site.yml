@@ -1,0 +1,43 @@
+---
+- import_playbook: linux_setup.yml
+  tags: 
+    - linux
+    - setup
+    
+- import_playbook: windows_setup.yml
+  tags:
+    - windows
+    - setup
+
+- name: "Verifica finale dei servizi"
+  hosts: all
+  gather_facts: true
+  
+  tasks:
+    - name: "Verifica servizi Linux"
+      systemd:
+        name: ssh
+      register: ssh_status
+      when: ansible_os_family != "Windows"
+      
+    - name: "Verifica servizi Windows"
+      win_service_info:
+        name: WinRM
+      register: winrm_status
+      when: ansible_os_family == "Windows"
+      
+    - name: "Report stato servizi"
+      debug:
+        msg: 
+          - "Sistema: {{ ansible_system }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "IP: {{ ansible_default_ipv4.address | default('N/A') }}"
+      when: ansible_os_family != "Windows"
+      
+    - name: "Report stato servizi Windows"
+      debug:
+        msg:
+          - "Sistema: {{ ansible_system }}"
+          - "Hostname: {{ ansible_hostname }}"
+          - "IP: {{ ansible_ip_addresses[0] | default('N/A') }}"
+      when: ansible_os_family == "Windows"

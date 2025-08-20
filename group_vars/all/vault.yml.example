@@ -1,0 +1,11 @@
+# File per memorizzare password criptate con ansible-vault
+# Creare il vault con: ansible-vault create group_vars/all/vault.yml
+# Modificare con: ansible-vault edit group_vars/all/vault.yml
+
+# Esempio di variabili da criptare:
+vault_windows_password: "PasswordComplessa123!"
+vault_database_password: "DatabasePassword456!"
+vault_api_key: "api_key_secret_789"
+
+# Per usare le variabili nel inventory o nei playbook:
+# ansible_password: "{{ vault_windows_password }}"
